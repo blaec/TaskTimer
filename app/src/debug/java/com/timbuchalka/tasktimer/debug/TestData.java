@@ -60,8 +60,8 @@ public class TestData {
 
     private static long randomDateTime() {
         // Set the range of years - change as necessary
-        final int startYear = 2017;
-        final int endYear = 2018;
+        final int startYear = 2019;
+        final int endYear = 2020;
 
         int sec = getRandomInt(59);
         int min = getRandomInt(59);

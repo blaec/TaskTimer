@@ -55,6 +55,8 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
 
+        applyFilter();
+
         RecyclerView recyclerView = findViewById(R.id.td_list);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         // Create an empty adapter we will use, to display the loaded data.
@@ -81,7 +83,7 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
         switch (id) {
             case R.id.rm_filter_period:
                 mDisplayWeek = !mDisplayWeek;   // toggle week-day
-                // TODO apply filter
+                applyFilter();
                 invalidateOptionsMenu();    // force call to onPrepareOptionsMenu to redraw our changed menu
                 getSupportLoaderManager().restartLoader(LOADER_ID, mArgs, this);
                 return true;
@@ -124,6 +126,26 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
             Log.d(TAG, "applyFilter: dayOfWeek is " + dayOfWeek);
             Log.d(TAG, "applyFilter: date is " + mCalendar.getTime());
 
+            // calculate week start and end dates
+            mCalendar.set(GregorianCalendar.DAY_OF_WEEK, weekStart);
+            String startDate = String.format(Locale.US, "%04d-%02d-%02d",
+                    mCalendar.get(GregorianCalendar.YEAR),
+                    mCalendar.get(GregorianCalendar.MONTH + 1),
+                    mCalendar.get(GregorianCalendar.DAY_OF_MONTH));
+
+            mCalendar.add(GregorianCalendar.DATE, 6);       // move forward 6 days to get the last day of the week
+
+            String endDate = String.format(Locale.US, "%04d-%02d-%02d",
+                    mCalendar.get(GregorianCalendar.YEAR),
+                    mCalendar.get(GregorianCalendar.MONTH + 1),
+                    mCalendar.get(GregorianCalendar.DAY_OF_MONTH));
+            String[] selectionArgs = new String[]{startDate, endDate};
+            // put the calendar back to where it was before we started jumping back and forth
+            mCalendar.setTime(currentCalendarDate);
+
+            Log.d(TAG, "In applyFilter(7), Start date is " + startDate + ", End Date is " + endDate);
+            mArgs.putString(SELECTION_PARAM, "StartDate Between ? AND ?");
+            mArgs.putStringArray(SELECTION_ARGS_PARAM, selectionArgs);
         } else {
             // re-query for the entire day
             String startDate = String.format(Locale.US, "%04d-%02d-%02d",
@@ -131,10 +153,9 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
                     mCalendar.get(GregorianCalendar.MONTH + 1),
                     mCalendar.get(GregorianCalendar.DAY_OF_MONTH));
             String[] selectionArgs = new String[]{startDate};
-            Log.d(TAG, "IN applyFilter(1), Start date is " + startDate);
+            Log.d(TAG, "In applyFilter(1), Start date is " + startDate);
             mArgs.putString(SELECTION_PARAM, "StartDate = ?");
             mArgs.putStringArray(SELECTION_ARGS_PARAM, selectionArgs);
-
         }
     }
 
