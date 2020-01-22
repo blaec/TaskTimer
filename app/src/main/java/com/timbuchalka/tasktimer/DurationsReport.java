@@ -16,7 +16,9 @@ import android.view.Menu;
 import android.view.MenuItem;
 
 import java.security.InvalidParameterException;
+import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.Locale;
 
 public class DurationsReport extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
@@ -48,7 +50,7 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
         setSupportActionBar(toolbar);
 
         ActionBar actionBar = getSupportActionBar();
-        if(actionBar != null) {
+        if (actionBar != null) {
             // Show the Up button in the action bar.
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
@@ -56,7 +58,7 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
         RecyclerView recyclerView = findViewById(R.id.td_list);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         // Create an empty adapter we will use, to display the loaded data.
-        if(mAdapter == null) {
+        if (mAdapter == null) {
             mAdapter = new DurationsRVAdapter(this, null);
         }
         recyclerView.setAdapter(mAdapter);
@@ -110,6 +112,32 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
         return super.onPrepareOptionsMenu(menu);
     }
 
+    private void applyFilter() {
+        Log.d(TAG, "applyFilter: entering");
+
+        if (mDisplayWeek) {
+            // show reports for entire week
+            Date currentCalendarDate = mCalendar.getTime();
+            int dayOfWeek = mCalendar.get(GregorianCalendar.DAY_OF_WEEK);
+            int weekStart = mCalendar.getFirstDayOfWeek();
+            Log.d(TAG, "applyFilter: first day of calendar week is " + weekStart);
+            Log.d(TAG, "applyFilter: dayOfWeek is " + dayOfWeek);
+            Log.d(TAG, "applyFilter: date is " + mCalendar.getTime());
+
+        } else {
+            // re-query for the entire day
+            String startDate = String.format(Locale.US, "%04d-%02d-%02d",
+                    mCalendar.get(GregorianCalendar.YEAR),
+                    mCalendar.get(GregorianCalendar.MONTH + 1),
+                    mCalendar.get(GregorianCalendar.DAY_OF_MONTH));
+            String[] selectionArgs = new String[]{startDate};
+            Log.d(TAG, "IN applyFilter(1), Start date is " + startDate);
+            mArgs.putString(SELECTION_PARAM, "StartDate = ?");
+            mArgs.putStringArray(SELECTION_ARGS_PARAM, selectionArgs);
+
+        }
+    }
+
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
         switch (id) {
@@ -119,13 +147,13 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
                         DurationsContract.Columns.DURATIONS_DESCRIPTION,
                         DurationsContract.Columns.DURATIONS_START_TIME,
                         DurationsContract.Columns.DURATIONS_START_DATE,
-                        DurationsContract.Columns.DURATIONS_DURATION };
+                        DurationsContract.Columns.DURATIONS_DURATION};
 
                 String selection = null;
                 String[] selectionArgs = null;
                 String sortOrder = null;
 
-                if(args != null) {
+                if (args != null) {
                     selection = args.getString(SELECTION_PARAM);
                     selectionArgs = args.getStringArray(SELECTION_ARGS_PARAM);
                     sortOrder = args.getString(SORT_ORDER_PARAM);
