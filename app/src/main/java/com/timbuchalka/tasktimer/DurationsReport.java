@@ -1,8 +1,10 @@
 package com.timbuchalka.tasktimer;
 
+import android.app.DatePickerDialog;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.provider.BaseColumns;
+import android.support.v4.app.DialogFragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
@@ -14,17 +16,22 @@ import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.DatePicker;
 
 import java.security.InvalidParameterException;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Locale;
 
-public class DurationsReport extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+public class DurationsReport extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>,
+                                                                  DatePickerDialog.OnDateSetListener {
 
     private static final String TAG = "DurationsReport";
 
     private static final int LOADER_ID = 1;
+
+    public static final int DIALOG_FILTER = 1;
+    public static final int DIALOG_DELETE = 2;
 
     private static final String SELECTION_PARAM = "SELECTION";
     private static final String SELECTION_ARGS_PARAM = "SELECTION_ARGS";
@@ -88,7 +95,7 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
                 getSupportLoaderManager().restartLoader(LOADER_ID, mArgs, this);
                 return true;
             case R.id.rm_filter_date:
-                // TODO showDatePickerDialog(); // The actual filterin is done in onDateSet();
+                showDatePickerDialog("Select date for report", DIALOG_FILTER); // The actual filterin is done in onDateSet();
                 return true;
             case R.id.rm_delete:
                 // TODO showDatePickerDialog(); // Theactual deleting is done onDateSet();
@@ -114,6 +121,40 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
         return super.onPrepareOptionsMenu(menu);
     }
 
+    private void showDatePickerDialog(String title, int dialogId) {
+        Log.d(TAG, "showDateTimeDialog: entering");
+        DialogFragment dialogFragment = new DatePickerFragment();
+
+        Bundle argumets = new Bundle();
+        argumets.putInt(DatePickerFragment.DATE_PICKER_ID, dialogId);
+        argumets.putString(DatePickerFragment.DATE_PICKER_TITLE, title);
+        argumets.putSerializable(DatePickerFragment.DATE_PICKER_DATE, mCalendar.getTime());
+
+        dialogFragment.setArguments(argumets);
+        dialogFragment.show(getSupportFragmentManager(), "datePicker");
+        Log.d(TAG, "showDateTimeDialog: exiting");
+    }
+
+    @Override
+    public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
+        Log.d(TAG, "onDateSet: called");
+
+        // Check the id, so we know what is the result
+        int dialogId = (int) view.getTag();
+        switch (dialogId) {
+            case DIALOG_FILTER:
+                mCalendar.set(year, month, dayOfMonth, 0, 0);
+                applyFilter();
+                getSupportLoaderManager().restartLoader(LOADER_ID, mArgs, this);
+                break;
+            case DIALOG_DELETE:
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid mode when receiving DatePickerDialog result");
+        }
+
+    }
+
     private void applyFilter() {
         Log.d(TAG, "applyFilter: entering");
 
@@ -130,14 +171,14 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
             mCalendar.set(GregorianCalendar.DAY_OF_WEEK, weekStart);
             String startDate = String.format(Locale.US, "%04d-%02d-%02d",
                     mCalendar.get(GregorianCalendar.YEAR),
-                    mCalendar.get(GregorianCalendar.MONTH + 1),
+                    mCalendar.get(GregorianCalendar.MONTH) + 1,
                     mCalendar.get(GregorianCalendar.DAY_OF_MONTH));
 
             mCalendar.add(GregorianCalendar.DATE, 6);       // move forward 6 days to get the last day of the week
 
             String endDate = String.format(Locale.US, "%04d-%02d-%02d",
                     mCalendar.get(GregorianCalendar.YEAR),
-                    mCalendar.get(GregorianCalendar.MONTH + 1),
+                    mCalendar.get(GregorianCalendar.MONTH) + 1,
                     mCalendar.get(GregorianCalendar.DAY_OF_MONTH));
             String[] selectionArgs = new String[]{startDate, endDate};
             // put the calendar back to where it was before we started jumping back and forth
