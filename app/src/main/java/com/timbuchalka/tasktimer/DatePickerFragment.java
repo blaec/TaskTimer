@@ -47,7 +47,7 @@ public class DatePickerFragment extends DialogFragment implements DatePickerDial
         int day = cal.get(GregorianCalendar.DAY_OF_MONTH);
 
 //        @SuppressWarnings("ConstantConditions")
-        DatePickerDialog dpd = new DatePickerDialog(getContext(), this, year, month, day);
+        UnbuggyDatePickerDialog dpd = new UnbuggyDatePickerDialog(getContext(), this, year, month, day);
         if (title != null) {
             dpd.setTitle(title);
         }
