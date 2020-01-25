@@ -5,6 +5,7 @@ import android.content.ContentResolver;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.provider.BaseColumns;
+import android.support.annotation.NonNull;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
@@ -67,6 +68,19 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
 
+        if (savedInstanceState != null) {
+            long timeInMillis = savedInstanceState.getLong(CURRENT_DATE, 0);
+            // it'll be zero when the Activity's first created, so don't set the value
+            if (timeInMillis != 0) {
+                mCalendar.setTimeInMillis(timeInMillis);
+                // Make sure the time part is cleared, because we filter the database by seconds
+                mCalendar.clear(GregorianCalendar.HOUR_OF_DAY);
+                mCalendar.clear(GregorianCalendar.MINUTE);
+                mCalendar.clear(GregorianCalendar.SECOND);
+            }
+            mDisplayWeek = savedInstanceState.getBoolean(DISPLAY_WEEK, true);
+        }
+
         applyFilter();
 
         RecyclerView recyclerView = findViewById(R.id.td_list);
@@ -79,6 +93,13 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
 
         getSupportLoaderManager().initLoader(LOADER_ID, mArgs, this);
 
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putLong(CURRENT_DATE, mCalendar.getTimeInMillis());
+        outState.putBoolean(DISPLAY_WEEK, mDisplayWeek);
     }
 
     @Override
@@ -100,10 +121,10 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
                 getSupportLoaderManager().restartLoader(LOADER_ID, mArgs, this);
                 return true;
             case R.id.rm_filter_date:
-                showDatePickerDialog("Select date for report", DIALOG_FILTER); // The actual filtering is done in onDateSet();
+                showDatePickerDialog(getString(R.string.date_title_filter), DIALOG_FILTER); // The actual filtering is done in onDateSet();
                 return true;
             case R.id.rm_delete:
-                showDatePickerDialog("Select date to delete up to", DIALOG_DELETE); // The actual deleting is done onDateSet();
+                showDatePickerDialog(getString(R.string.date_title_delete), DIALOG_DELETE); // The actual deleting is done onDateSet();
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -146,20 +167,19 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
 
         // Check the id, so we know what to do with the result
         int dialogId = (int) view.getTag();
+        mCalendar.set(year, month, dayOfMonth, 0, 0,0);
         switch (dialogId) {
             case DIALOG_FILTER:
-                mCalendar.set(year, month, dayOfMonth, 0, 0,0);
                 applyFilter();
                 getSupportLoaderManager().restartLoader(LOADER_ID, mArgs, this);
                 break;
             case DIALOG_DELETE:
-                mCalendar.set(year, month, dayOfMonth, 0, 0, 0);
                 String fromDate = DateFormat.getDateFormat(this)
                         .format(mCalendar.getTimeInMillis());
                 AppDialog dialog = new AppDialog();
                 Bundle args = new Bundle();
                 args.putInt(AppDialog.DIALOG_ID, 1);    // we only have q dialog in  this activity
-                args.putString(AppDialog.DIALOG_MESSAGE, "Are you sure you want to delete all timings before " + fromDate +"?");
+                args.putString(AppDialog.DIALOG_MESSAGE, getString(R.string.delete_timings_message, fromDate));
                 args.putLong(DELETION_DATE, mCalendar.getTimeInMillis());
                 dialog.setArguments(args);
                 dialog.show(getSupportFragmentManager(),null);
@@ -250,6 +270,7 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
         }
     }
 
+    @NonNull
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
         switch (id) {
@@ -284,7 +305,7 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
     }
 
     @Override
-    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+    public void onLoadFinished(@NonNull Loader<Cursor> loader, Cursor data) {
         Log.d(TAG, "Entering onLoadFinished");
         mAdapter.swapCursor(data);
         int count = mAdapter.getItemCount();
@@ -294,7 +315,7 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
     }
 
     @Override
-    public void onLoaderReset(Loader<Cursor> loader) {
+    public void onLoaderReset(@NonNull Loader<Cursor> loader) {
         Log.d(TAG, "onLoaderReset: starts");
         mAdapter.swapCursor(null);
     }
