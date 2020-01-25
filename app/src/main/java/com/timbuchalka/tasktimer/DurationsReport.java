@@ -40,6 +40,8 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
     private static final String SELECTION_ARGS_PARAM = "SELECTION_ARGS";
     private static final String SORT_ORDER_PARAM = "SORT_ORDER";
 
+    public static final String DELETION_DATE = "DELETION_DATE";
+
     public static final String CURRENT_DATE = "CURRENT_DATE";
     public static final String DISPLAY_WEEK = "DISPLAY_WEEK";
 
@@ -98,10 +100,10 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
                 getSupportLoaderManager().restartLoader(LOADER_ID, mArgs, this);
                 return true;
             case R.id.rm_filter_date:
-                showDatePickerDialog("Select date for report", DIALOG_FILTER); // The actual filterin is done in onDateSet();
+                showDatePickerDialog("Select date for report", DIALOG_FILTER); // The actual filtering is done in onDateSet();
                 return true;
             case R.id.rm_delete:
-                // TODO showDatePickerDialog(); // The actual deleting is done onDateSet();
+                showDatePickerDialog("Select date to delete up to", DIALOG_DELETE); // The actual deleting is done onDateSet();
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -158,6 +160,7 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
                 Bundle args = new Bundle();
                 args.putInt(AppDialog.DIALOG_ID, 1);    // we only have q dialog in  this activity
                 args.putString(AppDialog.DIALOG_MESSAGE, "Are you sure you want to delete all timings before " + fromDate +"?");
+                args.putLong(DELETION_DATE, mCalendar.getTimeInMillis());
                 dialog.setArguments(args);
                 dialog.show(getSupportFragmentManager(),null);
                 break;
@@ -170,15 +173,16 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
     @Override
     public void onPositiveDialogResult(int dialogId, Bundle args) {
         Log.d(TAG, "onPositiveDialogResult: called");
+        long deleteDate = args.getLong(DELETION_DATE);
         // clear all records from Timings table prior to the date selected
-        deleteRecords();
+        deleteRecords(deleteDate);
         // re-query, in case we've deleted records that currently being shown
         getSupportLoaderManager().restartLoader(LOADER_ID, mArgs, this);
     }
 
-    private void deleteRecords() {
+    private void deleteRecords(long timeInMillis) {
         Log.d(TAG, "deleteRecords: entering");
-        Long longDate = mCalendar.getTimeInMillis() / 1000;
+        Long longDate = timeInMillis / 1000;
         String[] selectionArgs = new String[]{Long.toString(longDate)};
         String selection = TimingsContract.Columns.TIMINGS_START_TIME + " < ?";
 
@@ -237,7 +241,7 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
             // re-query for the entire day
             String startDate = String.format(Locale.US, "%04d-%02d-%02d",
                     mCalendar.get(GregorianCalendar.YEAR),
-                    mCalendar.get(GregorianCalendar.MONTH + 1),
+                    mCalendar.get(GregorianCalendar.MONTH) + 1,
                     mCalendar.get(GregorianCalendar.DAY_OF_MONTH));
             String[] selectionArgs = new String[]{startDate};
             Log.d(TAG, "In applyFilter(1), Start date is " + startDate);
