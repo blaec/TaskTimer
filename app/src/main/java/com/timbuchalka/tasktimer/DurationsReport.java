@@ -1,6 +1,7 @@
 package com.timbuchalka.tasktimer;
 
 import android.app.DatePickerDialog;
+import android.content.ContentResolver;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.provider.BaseColumns;
@@ -13,6 +14,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -24,7 +26,8 @@ import java.util.GregorianCalendar;
 import java.util.Locale;
 
 public class DurationsReport extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>,
-                                                                  DatePickerDialog.OnDateSetListener {
+                                                                  DatePickerDialog.OnDateSetListener,
+                                                                  AppDialog.DialogEvents{
 
     private static final String TAG = "DurationsReport";
 
@@ -98,7 +101,7 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
                 showDatePickerDialog("Select date for report", DIALOG_FILTER); // The actual filterin is done in onDateSet();
                 return true;
             case R.id.rm_delete:
-                // TODO showDatePickerDialog(); // Theactual deleting is done onDateSet();
+                // TODO showDatePickerDialog(); // The actual deleting is done onDateSet();
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -139,19 +142,62 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
     public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
         Log.d(TAG, "onDateSet: called");
 
-        // Check the id, so we know what is the result
+        // Check the id, so we know what to do with the result
         int dialogId = (int) view.getTag();
         switch (dialogId) {
             case DIALOG_FILTER:
-                mCalendar.set(year, month, dayOfMonth, 0, 0);
+                mCalendar.set(year, month, dayOfMonth, 0, 0,0);
                 applyFilter();
                 getSupportLoaderManager().restartLoader(LOADER_ID, mArgs, this);
                 break;
             case DIALOG_DELETE:
+                mCalendar.set(year, month, dayOfMonth, 0, 0, 0);
+                String fromDate = DateFormat.getDateFormat(this)
+                        .format(mCalendar.getTimeInMillis());
+                AppDialog dialog = new AppDialog();
+                Bundle args = new Bundle();
+                args.putInt(AppDialog.DIALOG_ID, 1);    // we only have q dialog in  this activity
+                args.putString(AppDialog.DIALOG_MESSAGE, "Are you sure you want to delete all timings before " + fromDate +"?");
+                dialog.setArguments(args);
+                dialog.show(getSupportFragmentManager(),null);
                 break;
             default:
                 throw new IllegalArgumentException("Invalid mode when receiving DatePickerDialog result");
         }
+
+    }
+
+    @Override
+    public void onPositiveDialogResult(int dialogId, Bundle args) {
+        Log.d(TAG, "onPositiveDialogResult: called");
+        // clear all records from Timings table prior to the date selected
+        deleteRecords();
+        // re-query, in case we've deleted records that currently being shown
+        getSupportLoaderManager().restartLoader(LOADER_ID, mArgs, this);
+    }
+
+    private void deleteRecords() {
+        Log.d(TAG, "deleteRecords: entering");
+        Long longDate = mCalendar.getTimeInMillis() / 1000;
+        String[] selectionArgs = new String[]{Long.toString(longDate)};
+        String selection = TimingsContract.Columns.TIMINGS_START_TIME + " < ?";
+
+        Log.d(TAG, "Delete records prior to " + longDate);
+
+        ContentResolver contentResolver = getContentResolver();
+        contentResolver.delete(TimingsContract.CONTENT_URI, selection, selectionArgs);
+        applyFilter();
+        getSupportLoaderManager().restartLoader(LOADER_ID, mArgs, this);
+        Log.d(TAG, "deleteRecords: exiting");
+    }
+
+    @Override
+    public void onNegativeDialogResult(int dialogId, Bundle args) {
+
+    }
+
+    @Override
+    public void onDialogCancelled(int dialogId) {
 
     }
 
