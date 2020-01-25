@@ -19,7 +19,9 @@ import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.DatePicker;
+import android.widget.TextView;
 
 import java.security.InvalidParameterException;
 import java.util.Date;
@@ -28,7 +30,8 @@ import java.util.Locale;
 
 public class DurationsReport extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>,
                                                                   DatePickerDialog.OnDateSetListener,
-                                                                  AppDialog.DialogEvents{
+                                                                  AppDialog.DialogEvents,
+                                                                  View.OnClickListener{
 
     private static final String TAG = "DurationsReport";
 
@@ -83,6 +86,21 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
 
         applyFilter();
 
+        // Set the listener for the buttons so we can sort the report
+        TextView taskName = findViewById(R.id.td_name_heading);
+        taskName.setOnClickListener(this);
+
+        TextView taskDesc = findViewById(R.id.td_description_heading);
+        if (taskDesc != null) {
+            taskDesc.setOnClickListener(this);
+        }
+
+        TextView taskDate = findViewById(R.id.td_start_heading);
+        taskDate.setOnClickListener(this);
+
+        TextView taskDuration = findViewById(R.id.td_duration_heading);
+        taskDuration.setOnClickListener(this);
+
         RecyclerView recyclerView = findViewById(R.id.td_list);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         // Create an empty adapter we will use, to display the loaded data.
@@ -94,6 +112,30 @@ public class DurationsReport extends AppCompatActivity implements LoaderManager.
         getSupportLoaderManager().initLoader(LOADER_ID, mArgs, this);
 
     }
+
+    @Override
+    public void onClick(View view) {
+        Log.d(TAG, "onLongClick: called");
+
+        switch (view.getId()) {
+            case R.id.td_name_heading:
+                mArgs.putString(SORT_ORDER_PARAM, DurationsContract.Columns.DURATIONS_NAME);
+                break;
+            case R.id.td_description_heading:
+                mArgs.putString(SORT_ORDER_PARAM, DurationsContract.Columns.DURATIONS_DESCRIPTION);
+                break;
+            case R.id.td_start_heading:
+                mArgs.putString(SORT_ORDER_PARAM, DurationsContract.Columns.DURATIONS_START_DATE);
+                break;
+            case R.id.td_duration_heading:
+                mArgs.putString(SORT_ORDER_PARAM, DurationsContract.Columns.DURATIONS_DURATION);
+                break;
+        }
+
+        getSupportLoaderManager().restartLoader(LOADER_ID, mArgs, this);
+    }
+
+
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
